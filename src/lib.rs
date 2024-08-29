@@ -791,6 +791,9 @@ where
                         .map_err(Error::Decode)?,
                 );
             }
+
+            let members = self.member_buf.clone();
+            tracing::info!("received message with members: {members:?}");
         }
 
         let Header {
@@ -799,6 +802,8 @@ where
             dst: _,
             message,
         } = header;
+
+        tracing::info!("received message: {message:?}");
 
         let sender_is_active = self
             // It's a known member, so we ensure our knowledge about
@@ -1292,6 +1297,8 @@ where
             _ => (true, false),
         };
 
+        tracing::info!("send message: {:?}", header.message.clone());
+
         // If we're piggybacking data, we need at least 2 extra bytes
         // so that we can also encode the number of items we're stuffing
         // into this buffer
@@ -1333,6 +1340,24 @@ where
                 // cast from usize to u16
                 let num_updates = self.updates.fill(&mut buf, u16::MAX.into());
                 num_items = u16::try_from(num_updates).expect("usize bound by u16::MAX");
+            }
+
+            {
+                let mut buff = buf.get_ref().clone();
+                let mut members = Vec::<Member<T>>::new();
+
+                buff.advance(tally_position + 2);
+
+                for _i in 0..num_items {
+                    members.push(
+                        self.codec
+                            .decode_member(&mut buff)
+                            .map_err(anyhow::Error::msg)
+                            .map_err(Error::Decode)?,
+                    );
+                }
+
+                tracing::info!("send message with members: {members:?}");
             }
 
             // Seek back and write the correct number of items added
