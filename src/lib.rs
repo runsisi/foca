@@ -353,6 +353,7 @@ where
                         "update about identity with same prefix as ours, declaring it down"
                     );
                 }
+                tracing::info!("declare previous incarnation: {:?} down", &update);
                 self.apply_update(Member::down(update.into_identity()), &mut runtime)?;
             } else {
                 self.apply_update(update, &mut runtime)?;
@@ -1501,6 +1502,7 @@ where
             } else {
                 self.change_identity(new_identity.clone(), &mut runtime)?;
 
+                tracing::info!("rejoined with new id: {:?}", &new_identity);
                 runtime.notify(Notification::Rejoin(new_identity));
 
                 Ok(true)
